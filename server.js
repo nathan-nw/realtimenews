@@ -1,92 +1,103 @@
 /**
- * How to run:
- * 1) docker compose up -d
- * 2) Open Miniflux: http://localhost:8081
- * 3) Login with admin/adminpass
- * 4) Add a couple feeds (subscriptions)
- * 5) Create an API key in Miniflux UI
- * 6) Export env var and run:
- *    export MINIFLUX_API_KEY="..."
- *    npm i
- *    npm run dev
- * 7) Open http://localhost:3001
+ * Zero-Dependency News Highlights Server
+ * Fetches RSS feeds directly, dedupes, sorts, and caches them.
  */
 
-require('dotenv').config();
 const express = require('express');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const Parser = require('rss-parser');
 const app = express();
 const PORT = 3001;
+const parser = new Parser({
+    headers: { 'User-Agent': 'NewsHighlightsBar/1.0 (Simple RSS Aggregator)' }
+});
 
 app.use(express.static('public'));
+
+const CONFIG_FEEDS = [
+    'https://feeds.bbci.co.uk/news/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
+    'https://www.reuters.com/rssFeed/topNews',
+    'https://www.theverge.com/rss/index.xml',
+    'https://hnrss.org/frontpage'
+];
 
 let cache = {
     data: [],
     lastFetch: 0
 };
-const CACHE_DURATION = 60 * 1000; // 60 seconds
+const CACHE_CONTENT_TTL = 120 * 1000; // 120 seconds
 
-app.get('/api/highlights', async (req, res) => {
-    const MINIFLUX_URL = process.env.MINIFLUX_URL || 'http://localhost:8081';
-    const API_KEY = process.env.MINIFLUX_API_KEY;
+async function fetchAllFeeds() {
+    const promises = CONFIG_FEEDS.map(async (url) => {
+        try {
+            const feed = await parser.parseURL(url);
+            // Map items
+            return feed.items.map(item => ({
+                title: item.title,
+                url: item.link,
+                publishedAt: item.isoDate || item.pubDate, // rss-parser often provides isoDate
+                source: feed.title || 'Unknown'
+            }));
+        } catch (err) {
+            console.error(`Failed to fetch ${url}:`, err.message);
+            return [];
+        }
+    });
 
-    if (!API_KEY) {
-        return res.status(500).json({ error: 'Set MINIFLUX_API_KEY environment variable' });
+    // Wait for all, merge results
+    const results = await Promise.all(promises);
+    let allItems = results.flat();
+
+    // Dedupe by URL
+    const seen = new Set();
+    const uniqueItems = [];
+    for (const item of allItems) {
+        if (!item.url) continue;
+        if (!seen.has(item.url)) {
+            seen.add(item.url);
+            uniqueItems.push(item);
+        }
     }
 
+    // Sort by date desc
+    uniqueItems.sort((a, b) => {
+        const dateA = new Date(a.publishedAt || 0);
+        const dateB = new Date(b.publishedAt || 0);
+        return dateB - dateA;
+    });
+
+    return uniqueItems.slice(0, 30);
+}
+
+app.get('/api/highlights', async (req, res) => {
     const now = Date.now();
-    if (cache.data.length > 0 && (now - cache.lastFetch < CACHE_DURATION)) {
+    
+    // Serve fresh cache
+    if (cache.data.length > 0 && (now - cache.lastFetch < CACHE_CONTENT_TTL)) {
         return res.json(cache.data);
     }
 
     try {
-        // Try to get unread entries first
-        let response = await fetch(`${MINIFLUX_URL}/v1/entries?status=unread&order=published_at&direction=desc&limit=30`, {
-            headers: { 'X-Auth-Token': API_KEY }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Miniflux returned ${response.status}`);
-        }
-
-        let data = await response.json();
-        let entries = data.entries || [];
-
-        // If no unread, fallback to all entries
-        if (entries.length === 0) {
-            response = await fetch(`${MINIFLUX_URL}/v1/entries?order=published_at&direction=desc&limit=30`, {
-                headers: { 'X-Auth-Token': API_KEY }
-            });
-             if (response.ok) {
-                data = await response.json();
-                entries = data.entries || [];
+        const freshData = await fetchAllFeeds();
+        if (freshData.length > 0) {
+            cache.data = freshData;
+            cache.lastFetch = now;
+            return res.json(freshData);
+        } else {
+            // If fetch returns empty (e.g. all failed), serve stale if available
+            if (cache.data.length > 0) {
+                console.warn('Returning stale cache due to empty fetch result');
+                return res.json(cache.data);
             }
+            return res.json([]);
         }
-
-        // Dedupe by URL
-        const seen = new Set();
-        const highlights = [];
-        
-        for (const entry of entries) {
-            if (!seen.has(entry.url)) {
-                seen.add(entry.url);
-                highlights.push({
-                    title: entry.title,
-                    url: entry.url,
-                    published_at: entry.published_at,
-                    feed_title: entry.feed ? entry.feed.title : 'Unknown'
-                });
-            }
-        }
-
-        cache.data = highlights;
-        cache.lastFetch = now;
-        
-        res.json(highlights);
-
     } catch (error) {
-        console.error('Error fetching from Miniflux:', error);
-        res.status(502).json({ error: 'Failed to fetch headlines from Miniflux', details: error.message });
+        console.error('RSS Fetch Error:', error);
+        // Serve stale on error
+        if (cache.data.length > 0) {
+            return res.json(cache.data);
+        }
+        res.status(500).json({ error: 'Failed to update headlines.' });
     }
 });
 

@@ -37,16 +37,12 @@
                 itemsHtml += `
                     <div class="ticker-item">
                         <a href="${item.url}" target="_blank" class="headline-text">${item.title}</a>
-                        <span class="headline-source">— ${item.feed_title || 'Unknown'}</span>
+                        <span class="headline-source">— ${item.source || 'Unknown'}</span>
                     </div>
                 `;
             });
 
-            // Duplicate content 10 times to ensure it fills the width and loops smoothly for a long time
-            // A proper infinite loop usually involves cloning enough items to fill screen + buffer
-            // For MVP, repeating the set multiple times is a simple cheat.
-            // Better MVP approach for CSS logic: duplicate the ENTIRE set once, so we have [A B C] [A B C] and animation goes from 0% to -50%.
-            
+            // Duplicate content for the scrolling loop (0% -> -50%)
             tickerTrack.innerHTML = itemsHtml + itemsHtml; 
         }
 
@@ -64,7 +60,7 @@
             } catch (error) {
                 console.error('Error fetching highlights:', error);
                 if (headlights.length === 0) {
-                    tickerTrack.innerHTML = '<div class="ticker-item"><span class="headline-text">Error loading headlines. env variable might be missing.</span></div>';
+                    tickerTrack.innerHTML = '<div class="ticker-item"><span class="headline-text">Error loading headlines.</span></div>';
                 }
             }
         }
@@ -72,8 +68,8 @@
         // Initial fetch
         fetchHighlights();
 
-        // Fetch every 60 seconds
-        setInterval(fetchHighlights, 60000);
+        // Poll every 120 seconds
+        setInterval(fetchHighlights, 120000);
     </script>
 </body>
 </html>

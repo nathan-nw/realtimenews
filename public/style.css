@@ -62,7 +62,7 @@ body {
 .ticker-item {
     display: inline-flex;
     align-items: center;
-    margin-right: 40px; /* Space between headlines */
+    margin-right: 40px;
 }
 
 .headline-text {
@@ -87,6 +87,6 @@ body {
         transform: translateX(0);
     }
     100% {
-        transform: translateX(-50%); /* Move half the width (since we'll duplicate items) */
+        transform: translateX(-50%);
     }
 }
