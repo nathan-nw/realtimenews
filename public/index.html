@@ -9,45 +9,45 @@
 <body>
     <div class="highlights-bar">
         <div class="label">HIGHLIGHTS</div>
-        <div class="ticker-container">
-            <a href="#" id="headline-link" target="_blank" class="headline-text">Loading...</a>
-            <span id="headline-source" class="headline-source"></span>
+        <div class="ticker-mask">
+            <div class="ticker-track" id="ticker-track">
+                <!-- Items will be injected here -->
+            </div>
         </div>
     </div>
 
     <script>
-        const headlineLink = document.getElementById('headline-link');
-        const headlineSource = document.getElementById('headline-source');
-        
+        const tickerTrack = document.getElementById('ticker-track');
         let headlights = [];
-        let currentIndex = 0;
-        let rotateInterval;
 
-        function updateHeadline() {
+        function renderHeadlines() {
+            tickerTrack.innerHTML = '';
+            
             if (headlights.length === 0) {
-                headlineLink.textContent = "Add feeds in Miniflux to see headlines.";
-                headlineLink.href = "#";
-                headlineSource.textContent = "";
+                const item = document.createElement('div');
+                item.className = 'ticker-item';
+                item.innerHTML = `<span class="headline-text">Waiting for headlines...</span>`;
+                tickerTrack.appendChild(item);
                 return;
             }
 
-            const item = headlights[currentIndex];
-            
-            // Fade out
-            headlineLink.classList.add('fade-out');
-            headlineSource.classList.add('fade-out');
+            // Create items string
+            let itemsHtml = '';
+            headlights.forEach(item => {
+                itemsHtml += `
+                    <div class="ticker-item">
+                        <a href="${item.url}" target="_blank" class="headline-text">${item.title}</a>
+                        <span class="headline-source">— ${item.feed_title || 'Unknown'}</span>
+                    </div>
+                `;
+            });
 
-            setTimeout(() => {
-                headlineLink.textContent = item.title;
-                headlineLink.href = item.url;
-                headlineSource.textContent = item.feed_title ? ` — ${item.feed_title}` : '';
-                
-                // Fade in
-                headlineLink.classList.remove('fade-out');
-                headlineSource.classList.remove('fade-out');
-                
-                currentIndex = (currentIndex + 1) % headlights.length;
-            }, 300); // Wait for fade out to complete (should match CSS transition)
+            // Duplicate content 10 times to ensure it fills the width and loops smoothly for a long time
+            // A proper infinite loop usually involves cloning enough items to fill screen + buffer
+            // For MVP, repeating the set multiple times is a simple cheat.
+            // Better MVP approach for CSS logic: duplicate the ENTIRE set once, so we have [A B C] [A B C] and animation goes from 0% to -50%.
+            
+            tickerTrack.innerHTML = itemsHtml + itemsHtml; 
         }
 
         async function fetchHighlights() {
@@ -56,34 +56,17 @@
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
                 
-                // Only update if we have new data or if it's the first load
+                // Only update if data changed (simple string compare)
                 if (JSON.stringify(data) !== JSON.stringify(headlights)) {
                     headlights = data;
-                    currentIndex = 0; // Reset to start
-                    if (headlights.length > 0 && !rotateInterval) {
-                        updateHeadline();
-                        startRotation();
-                    } else if (headlights.length === 0) {
-                        updateHeadline();
-                        stopRotation();
-                    }
+                    renderHeadlines();
                 }
             } catch (error) {
                 console.error('Error fetching highlights:', error);
                 if (headlights.length === 0) {
-                    headlineLink.textContent = "Error loading headlines.";
+                    tickerTrack.innerHTML = '<div class="ticker-item"><span class="headline-text">Error loading headlines. env variable might be missing.</span></div>';
                 }
             }
-        }
-
-        function startRotation() {
-            if (rotateInterval) clearInterval(rotateInterval);
-            rotateInterval = setInterval(updateHeadline, 4000);
-        }
-        
-        function stopRotation() {
-            if (rotateInterval) clearInterval(rotateInterval);
-            rotateInterval = null;
         }
 
         // Initial fetch

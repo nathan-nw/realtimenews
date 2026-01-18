@@ -5,9 +5,9 @@ body {
     color: #fff;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Stick to top or center vertically depending on preference, top for a bar */
+    align-items: flex-start;
     height: 100vh;
-    padding-top: 50px; /* Just to push it down a bit for visibility in demo */
+    padding-top: 50px;
 }
 
 .highlights-bar {
@@ -19,11 +19,12 @@ body {
     height: 40px;
     overflow: hidden;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    border-radius: 4px; /* Optional rounded corners */
+    border-radius: 4px;
+    position: relative;
 }
 
 .label {
-    background-color: #c00; /* News red */
+    background-color: #c00;
     color: white;
     font-weight: bold;
     font-size: 14px;
@@ -33,16 +34,35 @@ body {
     align-items: center;
     letter-spacing: 0.5px;
     flex-shrink: 0;
+    z-index: 10;
+    position: relative;
 }
 
-.ticker-container {
+.ticker-mask {
     flex-grow: 1;
-    padding: 0 15px;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    position: relative;
+    height: 100%;
     display: flex;
     align-items: center;
+}
+
+.ticker-track {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    white-space: nowrap;
+    animation: scroll 116s linear infinite;
+}
+
+.ticker-track:hover {
+    animation-play-state: paused;
+}
+
+.ticker-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 40px; /* Space between headlines */
 }
 
 .headline-text {
@@ -50,16 +70,7 @@ body {
     text-decoration: none;
     font-size: 16px;
     font-weight: 500;
-    transition: opacity 0.3s ease-in-out;
-    opacity: 1;
     margin-right: 8px;
-    
-    /* Truncate logic */
-    display: inline-block;
-    max-width: 100%; 
-    white-space: nowrap; 
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .headline-text:hover {
@@ -69,11 +80,13 @@ body {
 .headline-source {
     color: #888;
     font-size: 13px;
-    transition: opacity 0.3s ease-in-out;
-    opacity: 1;
-    white-space: nowrap;
 }
 
-.fade-out {
-    opacity: 0;
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%); /* Move half the width (since we'll duplicate items) */
+    }
 }
