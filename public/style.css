@@ -1,0 +1,79 @@
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background-color: #1a1a1a;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Stick to top or center vertically depending on preference, top for a bar */
+    height: 100vh;
+    padding-top: 50px; /* Just to push it down a bit for visibility in demo */
+}
+
+.highlights-bar {
+    display: flex;
+    align-items: center;
+    background-color: #000;
+    width: 100%;
+    max-width: 800px;
+    height: 40px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    border-radius: 4px; /* Optional rounded corners */
+}
+
+.label {
+    background-color: #c00; /* News red */
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 0 15px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.ticker-container {
+    flex-grow: 1;
+    padding: 0 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+}
+
+.headline-text {
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+    margin-right: 8px;
+    
+    /* Truncate logic */
+    display: inline-block;
+    max-width: 100%; 
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.headline-text:hover {
+    text-decoration: underline;
+}
+
+.headline-source {
+    color: #888;
+    font-size: 13px;
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+    white-space: nowrap;
+}
+
+.fade-out {
+    opacity: 0;
+}

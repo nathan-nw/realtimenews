@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Highlights</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="highlights-bar">
+        <div class="label">HIGHLIGHTS</div>
+        <div class="ticker-container">
+            <a href="#" id="headline-link" target="_blank" class="headline-text">Loading...</a>
+            <span id="headline-source" class="headline-source"></span>
+        </div>
+    </div>
+
+    <script>
+        const headlineLink = document.getElementById('headline-link');
+        const headlineSource = document.getElementById('headline-source');
+        
+        let headlights = [];
+        let currentIndex = 0;
+        let rotateInterval;
+
+        function updateHeadline() {
+            if (headlights.length === 0) {
+                headlineLink.textContent = "Add feeds in Miniflux to see headlines.";
+                headlineLink.href = "#";
+                headlineSource.textContent = "";
+                return;
+            }
+
+            const item = headlights[currentIndex];
+            
+            // Fade out
+            headlineLink.classList.add('fade-out');
+            headlineSource.classList.add('fade-out');
+
+            setTimeout(() => {
+                headlineLink.textContent = item.title;
+                headlineLink.href = item.url;
+                headlineSource.textContent = item.feed_title ? ` — ${item.feed_title}` : '';
+                
+                // Fade in
+                headlineLink.classList.remove('fade-out');
+                headlineSource.classList.remove('fade-out');
+                
+                currentIndex = (currentIndex + 1) % headlights.length;
+            }, 300); // Wait for fade out to complete (should match CSS transition)
+        }
+
+        async function fetchHighlights() {
+            try {
+                const response = await fetch('/api/highlights');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                
+                // Only update if we have new data or if it's the first load
+                if (JSON.stringify(data) !== JSON.stringify(headlights)) {
+                    headlights = data;
+                    currentIndex = 0; // Reset to start
+                    if (headlights.length > 0 && !rotateInterval) {
+                        updateHeadline();
+                        startRotation();
+                    } else if (headlights.length === 0) {
+                        updateHeadline();
+                        stopRotation();
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching highlights:', error);
+                if (headlights.length === 0) {
+                    headlineLink.textContent = "Error loading headlines.";
+                }
+            }
+        }
+
+        function startRotation() {
+            if (rotateInterval) clearInterval(rotateInterval);
+            rotateInterval = setInterval(updateHeadline, 4000);
+        }
+        
+        function stopRotation() {
+            if (rotateInterval) clearInterval(rotateInterval);
+            rotateInterval = null;
+        }
+
+        // Initial fetch
+        fetchHighlights();
+
+        // Fetch every 60 seconds
+        setInterval(fetchHighlights, 60000);
+    </script>
+</body>
+</html>

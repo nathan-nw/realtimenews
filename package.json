@@ -1,0 +1,14 @@
+{
+  "name": "news-highlights-bar",
+  "version": "1.0.0",
+  "description": "A minimal news ticker using Miniflux",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  }
+}
